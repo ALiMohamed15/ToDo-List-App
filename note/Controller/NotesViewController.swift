@@ -11,6 +11,8 @@ import CoreData
 
 class NotesViewController : UITableViewController {
 
+    @IBOutlet weak var SearchBar: UISearchBar!
+    
     let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     var itemArray = [Notes]()
@@ -40,10 +42,10 @@ class NotesViewController : UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        context.delete(itemArray[indexPath.row])
-        itemArray.remove(at: indexPath.row)
+//      context.delete(itemArray[indexPath.row])
+//      itemArray.remove(at: indexPath.row)
         
-      //  itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
         tableView.deselectRow(at: indexPath, animated: true )
         tableView.reloadData()
@@ -83,8 +85,8 @@ class NotesViewController : UITableViewController {
         alert.addAction(Action)
         alert.addAction(cancel)
         present(alert, animated: true, completion: nil)
-        
     }
+    
     func saveContext()  {
         do {
             try context.save()
@@ -93,14 +95,28 @@ class NotesViewController : UITableViewController {
         }
     }
     
-    func LoadData() {
-        let request : NSFetchRequest<Notes> = Notes.fetchRequest()
+    func LoadData(With request : NSFetchRequest<Notes> = Notes.fetchRequest()) {
+        
         do {
            itemArray = try context.fetch(request)
         } catch  {
             print("Error Fetching data from Context \(error)")
         }
+        tableView.reloadData()
+    }
+}
+
+//Mark: - Search Bar Method
+
+extension NotesViewController : UISearchBarDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Notes> = Notes.fetchRequest()
+        request.predicate = NSPredicate(format: "text CONTAINS[cd] %@", searchBar.text!)
         
+        let sorDescrepter = NSSortDescriptor(key: "text", ascending: true)
+        request.sortDescriptors = [sorDescrepter]
+        
+        LoadData(With: request)
     }
 }
 
