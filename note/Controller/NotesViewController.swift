@@ -118,5 +118,17 @@ extension NotesViewController : UISearchBarDelegate {
         
         LoadData(With: request)
     }
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            LoadData()
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+          
+        }
+        
+        
+    }
 }
 
