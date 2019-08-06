@@ -12,15 +12,19 @@ import CoreData
 class NotesViewController : UITableViewController {
 
     @IBOutlet weak var SearchBar: UISearchBar!
+    var selectedCategories : Category? {
+        didSet {
+            LoadData()
+        }
+    }
     
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
+    
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     var itemArray = [Notes]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        LoadData()
+        
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -34,7 +38,6 @@ class NotesViewController : UITableViewController {
         let item = itemArray[indexPath.row]
         
         cell.textLabel?.text = item.text
-        
         cell.accessoryType = item.done == true ? .checkmark : .none
         
        return cell
@@ -58,13 +61,14 @@ class NotesViewController : UITableViewController {
         
         var ItemTextFieled = UITextField()
         
-        let alert = UIAlertController(title: "Add New Note", message: "" , preferredStyle: UIAlertController.Style.alert)
+        let alert = UIAlertController(title: "Add New Note", message: "" , preferredStyle: .alert)
         
         let Action = UIAlertAction(title: "Add", style: .default) { (action) in
             if ItemTextFieled.text != "" {
                 let newItem = Notes(context: self.context)
                 newItem.text = ItemTextFieled.text!
                 newItem.done = false
+                newItem.parentCategory = self.selectedCategories
                 self.itemArray.append(newItem)
                 self.saveContext()
                 
@@ -95,7 +99,19 @@ class NotesViewController : UITableViewController {
         }
     }
     
-    func LoadData(With request : NSFetchRequest<Notes> = Notes.fetchRequest()) {
+    func LoadData(With request : NSFetchRequest<Notes> = Notes.fetchRequest(), predicate : NSPredicate? = nil) {
+        
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@" , (selectedCategories!.name)!)
+        
+        if let additionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate , additionalPredicate])
+        }else {
+            request.predicate = categoryPredicate
+        }
+        
+//        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate , categoryPredicate])
+//
+//        request.predicate = compoundPredicate
         
         do {
            itemArray = try context.fetch(request)
@@ -106,18 +122,25 @@ class NotesViewController : UITableViewController {
     }
 }
 
+
 //Mark: - Search Bar Method
 
 extension NotesViewController : UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
         let request : NSFetchRequest<Notes> = Notes.fetchRequest()
-        request.predicate = NSPredicate(format: "text CONTAINS[cd] %@", searchBar.text!)
+        
+          let predicate = NSPredicate(format: "text CONTAINS[cd] %@", searchBar.text!)
+        
+        request.predicate = predicate
         
         let sorDescrepter = NSSortDescriptor(key: "text", ascending: true)
         request.sortDescriptors = [sorDescrepter]
         
-        LoadData(With: request)
+        LoadData(With: request, predicate: predicate)
     }
+    
+    
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
             LoadData()
@@ -125,10 +148,8 @@ extension NotesViewController : UISearchBarDelegate {
             DispatchQueue.main.async {
                 searchBar.resignFirstResponder()
             }
-          
         }
-        
-        
     }
+    
 }
 
